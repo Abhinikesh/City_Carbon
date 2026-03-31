@@ -1,0 +1,128 @@
+{
+  "delhi": {
+    "score": 28,
+    "label": "Critical",
+    "transport": 38,
+    "energy": 35,
+    "industry": 18,
+    "waste": 9,
+    "co2PerCapita": 2.1,
+    "nationalAvg": 1.8,
+    "trend": [45, 43, 40, 38, 36, 34, 31, 28],
+    "electricityZone": "IN-NO",
+    "coordinates": { "lat": 28.6139, "lon": 77.209 },
+    "tips": [
+      "Delhi has 10M+ vehicles — use Metro when possible",
+      "Avoid burning crop waste — contributes 30% of winter smog",
+      "Switch to LED bulbs — reduces home energy CO₂ by 40%"
+    ]
+  },
+  "london": {
+    "score": 74,
+    "label": "Good",
+    "transport": 28,
+    "energy": 33,
+    "industry": 22,
+    "waste": 17,
+    "co2PerCapita": 4.8,
+    "nationalAvg": 5.2,
+    "trend": [60, 63, 65, 67, 69, 70, 72, 74],
+    "electricityZone": "GB",
+    "coordinates": { "lat": 51.5074, "lon": -0.1278 },
+    "tips": [
+      "Use TfL's cycle hire — cycling emits 0g CO₂ vs 170g/km by car",
+      "London's grid is 50%+ renewable — great time to switch to EV",
+      "Insulate your home — heating is London's biggest residential emission"
+    ]
+  },
+  "tokyo": {
+    "score": 58,
+    "label": "Moderate",
+    "transport": 25,
+    "energy": 40,
+    "industry": 25,
+    "waste": 10,
+    "co2PerCapita": 5.5,
+    "nationalAvg": 8.7,
+    "trend": [52, 53, 55, 56, 57, 57, 58, 58],
+    "electricityZone": "JP",
+    "coordinates": { "lat": 35.6762, "lon": 139.6503 },
+    "tips": [
+      "Japan's bullet trains are 12x greener than domestic flights",
+      "Nuclear restart debate — supporting renewable energy policy matters",
+      "Japanese recycling is world-class — separate your 10 categories!"
+    ]
+  },
+  "new york": {
+    "score": 62,
+    "label": "Moderate",
+    "transport": 32,
+    "energy": 30,
+    "industry": 20,
+    "waste": 18,
+    "co2PerCapita": 6.2,
+    "nationalAvg": 14.0,
+    "trend": [55, 57, 58, 59, 60, 61, 62, 62],
+    "electricityZone": "US-MIDA",
+    "coordinates": { "lat": 40.7128, "lon": -74.006 },
+    "tips": [
+      "NYC subway is one of the greenest transit systems in the US",
+      "Buildings account for 70% of NYC emissions — push for retrofits",
+      "Local food from NY farms cuts food miles by up to 90%"
+    ]
+  },
+  "mumbai": {
+    "score": 35,
+    "label": "Poor",
+    "transport": 40,
+    "energy": 32,
+    "industry": 20,
+    "waste": 8,
+    "co2PerCapita": 1.9,
+    "nationalAvg": 1.8,
+    "trend": [42, 41, 40, 39, 38, 37, 36, 35],
+    "electricityZone": "IN-NO",
+    "coordinates": { "lat": 19.076, "lon": 72.8777 },
+    "tips": [
+      "Mumbai's local trains carry 7M people/day — use them over autos",
+      "Dharavi recycling model is world-famous — support informal recyclers",
+      "Switch to solar water heaters — Mumbai gets 300 sunny days/year"
+    ]
+  },
+  "berlin": {
+    "score": 68,
+    "label": "Good",
+    "transport": 26,
+    "energy": 35,
+    "industry": 24,
+    "waste": 15,
+    "co2PerCapita": 5.8,
+    "nationalAvg": 9.0,
+    "trend": [55, 57, 59, 61, 63, 65, 67, 68],
+    "electricityZone": "DE",
+    "coordinates": { "lat": 52.52, "lon": 13.405 },
+    "tips": [
+      "Berlin's cycling network is 1,300km — bike over car for short trips",
+      "Germany's Energiewende is pushing 80% renewables by 2030",
+      "District heating systems in Berlin are very efficient — opt in"
+    ]
+  },
+  "default": {
+    "score": 50,
+    "label": "Moderate",
+    "transport": 35,
+    "energy": 30,
+    "industry": 22,
+    "waste": 13,
+    "co2PerCapita": 5.0,
+    "nationalAvg": 5.0,
+    "trend": [48, 49, 50, 50, 50, 50, 50, 50],
+    "electricityZone": "GB",
+    "coordinates": { "lat": 51.5074, "lon": -0.1278 },
+    "tips": [
+      "Switch to renewable energy provider",
+      "Reduce meat consumption — livestock = 14.5% of global emissions",
+      "Use public transport or cycle for daily commute"
+    ]
+  }
+}
