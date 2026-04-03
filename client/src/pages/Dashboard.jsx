@@ -9,7 +9,7 @@ import TipsPanel from "../components/TipsPanel";
 import CompareBar from "../components/CompareBar";
 
 // ─── CONFIG ───────────────────────────────────────────
-const API = "http://localhost:3001";
+const API = import.meta.env.VITE_API_URL || "";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
 const CITIES = [
   { name: "Delhi", key: "delhi", flag: "🇮🇳" },
