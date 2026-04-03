@@ -96,33 +96,109 @@ header {
     animation: pulse 1.5s infinite;
 }
 
-.city-selector {
-    display: flex;
-    gap: 8px;
+.search-wrap {
+    position: relative;
+    width: 300px;
 }
 
-.city-pill {
+.search-input {
+    width: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 8px 16px;
+    color: var(--text);
+    padding: 10px 16px;
     border-radius: 999px;
-    cursor: pointer;
     font-family: var(--font-head);
+    font-size: 1rem;
     font-weight: 600;
-    transition: all 0.3s ease;
+    outline: none;
+    transition: border-color 0.3s ease;
 }
 
-.city-pill:hover {
-    border-color: var(--border2);
+.search-input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 2px var(--green-dim);
+}
+
+.city-dropdown {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-height: 384px;
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+    z-index: 2000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.city-dropdown.open {
+    display: flex;
+    animation: fadeUp 0.2s ease both;
+}
+
+.city-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+.city-dropdown::-webkit-scrollbar-track {
+    background: var(--card);
+    border-radius: 12px;
+}
+.city-dropdown::-webkit-scrollbar-thumb {
+    background: var(--border2);
+    border-radius: 12px;
+}
+
+.dropdown-item {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-head);
+    transition: background 0.2s;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover, .dropdown-item.focused {
+    background: var(--border);
+}
+
+.dropdown-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dropdown-item-name {
+    font-weight: 700;
     color: var(--text);
 }
 
-.city-pill.active {
-    border-color: var(--green);
-    color: var(--green);
-    background: var(--green-dim);
-    box-shadow: 0 0 12px var(--green-dim);
+.dropdown-item-country {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.dropdown-score {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--card);
+}
+
+.selected-city {
+    background: var(--border2);
 }
 
 main {
