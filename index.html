@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CityCarbon — Live City Emissions Dashboard</title>
+    
+    <!-- FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- LEAFLET CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+        :root {
+            --bg: #050a14;
+            --surface: #0b1220;
+            --card: #0d1526;
+            --border: #1a2540;
+            --border2: #243050;
+            --green: #00e5a0;
+            --green-dim: #00e5a022;
+            --yellow: #f5c842;
+            --red: #ff4f6d;
+            --blue: #4f8fff;
+            --text: #e8f0ff;
+            --muted: #4a5a7a;
+            --muted2: #2a3550;
+            
+            --font-head: 'Syne', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-head);
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* HEADER */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(5,10,20,0.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 1.5rem;
+        }
+
+        .logo-area span {
+            color: var(--green);
+        }
+
+        .live-badge {
+            background: var(--green-dim);
+            color: var(--green);
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-badge::before {
+            content: '';
+            width: 6px; height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+        }
+
+        .city-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .city-pill {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 8px 16px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-family: var(--font-head);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .city-pill:hover {
+            border-color: var(--border2);
+            color: var(--text);
+        }
+
+        .city-pill.active {
+            border-color: var(--green);
+            color: var(--green);
+            background: var(--green-dim);
+            box-shadow: 0 0 12px var(--green-dim);
+        }
+
+        /* MAIN CONTAINER */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* HERO SECTION */
+        .hero {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            animation: fadeUp 0.6s ease both;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border2);
+        }
+
+        /* SCORE RING */
+        .score-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .score-label {
+            font-family: var(--font-mono);
+            color: var(--muted);
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            margin-bottom: 1.5rem;
+        }
+
+        .svg-ring-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin-bottom: 1rem;
+        }
+
+        .score-svg {
+            transform: rotate(-90deg);
+            filter: drop-shadow(0 0 8px var(--ring-color, var(--green)));
+        }
+
+        .score-circle-bg {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 12;
+        }
+
+        .score-circle-fg {
+            fill: none;
+            stroke: var(--ring-color, var(--green));
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-dasharray: 427.26;
+            stroke-dashoffset: 427.26;
+            transition: stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1), stroke 0.5s;
+        }
+
+        .score-number {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-mono);
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--ring-color, var(--green));
+            transition: color 0.5s;
+        }
+
+        .score-max {
+            font-size: 1rem;
+            color: var(--muted);
+        }
+
+        .score-status {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--ring-color, var(--green));
+            transition: color 0.5s;
+            margin-bottom: 0.5rem;
+        }
+
+        .aqi-badge {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .aqi-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+        }
+
+        /* STATS GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: auto auto;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .stat-wide {
+            grid-column: span 2;
+        }
+
+        .stat-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-title {
+            color: var(--muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-val {
+            font-size: 1.8rem;
+            font-weight: 800;
+            font-family: var(--font-mono);
+        }
+
+        .stat-sub {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .mini-bars {
+            display: flex;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 12px;
+            background: var(--border);
+        }
+
+        .mini-bar {
+            height: 100%;
+            transition: width 1.2s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* TABS */
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+            gap: 1rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            padding: 1rem 0;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+        }
+
+        .tab-btn.active {
+            color: var(--green);
+            border-bottom-color: var(--green);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeUp 0.3s ease both;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* TAB 1: OVERVIEW */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* TAB 2: SECTORS */
+        .sectors-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .sector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .sector-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .sector-val {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .sector-bar-bg {
+            background: var(--border);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .sector-bar-fg {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1.2s cubic-bezier(.4,0,.2,1);
+        }
+
+        .sector-status {
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-family: var(--font-mono);
+        }
+
+        /* TAB 4: MAP */
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 12px;
+            background: var(--border);
+            z-index: 10;
+        }
+
+        .custom-popup .leaflet-popup-content-wrapper {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: var(--font-head);
+        }
+        .custom-popup .leaflet-popup-tip {
+            background: var(--card);
+            border: 1px solid var(--border);
+        }
+
+        /* TAB 5: TIPS */
+        .tips-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .tip-card {
+            border-left: 3px solid var(--green);
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .tip-num {
+            color: var(--green);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        /* ANIMATION DELAYS FOR CARDS */
+        .delay-1 { animation-delay: 0.05s; }
+        .delay-2 { animation-delay: 0.10s; }
+        .delay-3 { animation-delay: 0.15s; }
+        .delay-4 { animation-delay: 0.20s; }
+        .delay-5 { animation-delay: 0.25s; }
+
+        /* FOOTER */
+        footer {
+            margin-top: 4rem;
+            padding: 2rem 0;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            🌍 City<span>Carbon</span>
+            <div class="live-badge">LIVE</div>
+        </div>
+        <div class="city-selector" id="city-selector">
+            <!-- Rendered by JS -->
+        </div>
+    </header>
+
+    <main>
+        <!-- HERO -->
+        <section class="hero">
+            <!-- Left Score -->
+            <div class="card score-card">
+                <div class="score-label">CARBON HEALTH SCORE</div>
+                <div class="svg-ring-container">
+                    <svg width="150" height="150" class="score-svg">
+                        <circle cx="75" cy="75" r="68" class="score-circle-bg"></circle>
+                        <circle cx="75" cy="75" r="68" class="score-circle-fg" id="score-ring"></circle>
+                    </svg>
+                    <div class="score-number" id="score-val">0</div>
+                </div>
+                <div class="score-status" id="score-status">-</div>
+                <div class="aqi-badge">
+                    <span class="aqi-dot" id="aqi-dot"></span>
+                    <span id="aqi-text">AQI Loading...</span>
+                </div>
+            </div>
+
+            <!-- Right Stats -->
+            <div class="stats-grid">
+                <!-- R1 -->
+                <div class="card stat-card delay-1">
+                    <div class="stat-icon">🌡️</div>
+                    <div>
+                        <div class="stat-title">CO₂ Per Capita</div>
+                        <div class="stat-val" style="color: var(--blue)" id="co2-val">-t</div>
+                    </div>
+                </div>
+                <div class="card stat-card delay-2">
+                    <div class="stat-icon">🌍</div>
+                    <div>
+                        <div class="stat-title">vs National Avg</div>
+                        <div class="stat-val" id="nat-val">-t</div>
+                    </div>
+                </div>
+                <div class="card stat-card delay-3">
+                    <div class="stat-icon">💨</div>
+                    <div>
+                        <div class="stat-title">PM2.5 (Live)</div>
+                        <div class="stat-val" style="color: var(--yellow)" id="pm-val">-</div>
+                        <div class="stat-sub" id="weather-val">Loading weather...</div>
+                    </div>
+                </div>
+                <div class="card stat-card delay-4">
+                    <div class="stat-icon">🏭</div>
+                    <div>
+                        <div class="stat-title">Top Emitter</div>
+                        <div class="stat-val" style="color: var(--red); font-size: 1.4rem;" id="top-emitter">-</div>
+                    </div>
+                </div>
+
+                <!-- R2 -->
+                <div class="card stat-card stat-wide delay-5">
+                    <div class="stat-title">⚡ Grid Carbon Intensity</div>
+                    <div class="stat-val" style="color: var(--green)" id="grid-val">- gCO₂/kWh</div>
+                    <div class="mini-bars">
+                        <div class="mini-bar" id="grid-bar-ren" style="background: var(--green); width: 0%;"></div>
+                        <div class="mini-bar" id="grid-bar-fos" style="background: var(--red); width: 0%;"></div>
+                    </div>
+                    <div class="stat-sub" style="display:flex; justify-content:space-between; margin-top:6px;">
+                        <span id="ren-txt">Renewable</span>
+                        <span>Fossil Fuels</span>
+                    </div>
+                </div>
+                <div class="card stat-card stat-wide delay-5">
+                    <div class="stat-title">📊 vs World Average (4.7t)</div>
+                    <div class="stat-val" id="world-diff">-</div>
+                    <div class="mini-bars">
+                        <div class="mini-bar" id="world-bar-city" style="background: var(--blue); width: 0%;"></div>
+                        <div class="mini-bar" style="background: var(--muted); width: 47%; border-left: 2px solid var(--bg);"></div>
+                    </div>
+                    <div class="stat-sub" style="display:flex; justify-content:space-between; margin-top:6px;">
+                        <span>City</span>
+                        <span>Global Avg</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TABS HEADER -->
+        <div class="tabs-header">
+            <button class="tab-btn active" data-tab="tab-overview">Overview</button>
+            <button class="tab-btn" data-tab="tab-sectors">Sectors</button>
+            <button class="tab-btn" data-tab="tab-compare">Compare</button>
+            <button class="tab-btn" data-tab="tab-map">Air Quality Map</button>
+            <button class="tab-btn" data-tab="tab-tips">Tips</button>
+        </div>
+
+        <!-- TAB CONTENT -->
+        <!-- Overview -->
+        <div id="tab-overview" class="tab-content active">
+            <div class="overview-grid">
+                <div class="card">
+                    <h3 style="margin-bottom:1rem">CO₂ Score Trend (8 Months)</h3>
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:1rem">Emissions by Sector</h3>
+                    <div class="chart-container">
+                        <canvas id="donutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sectors -->
+        <div id="tab-sectors" class="tab-content">
+            <div class="sectors-grid" id="sectors-container">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+
+        <!-- Compare -->
+        <div id="tab-compare" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom:1rem">City Comparison</h3>
+                <div class="chart-container" style="height: 400px;">
+                    <canvas id="compareChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div id="tab-map" class="tab-content">
+            <div class="card" style="padding:1rem;">
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div id="tab-tips" class="tab-content">
+            <div class="card tips-list" id="tips-container">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        Data: OpenAQ • Electricity Maps • Open-Meteo • EPA Emission Factors • 🌿 Built for CityCarbon Hackathon 2025
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- 1. DATA ---
+        const CITIES = [
+            {
+                name: "Delhi", key: "delhi", flag: "🇮🇳",
+                score: 28, label: "Critical", color: "#ff4f6d",
+                transport: 38, energy: 35, industry: 18, waste: 9,
+                co2: 2.1, natAvg: 1.8, pm25: 89, no2: 45,
+                grid: 820, renewable: 12,
+                trend: [45, 43, 40, 38, 36, 34, 31, 28],
+                coords: [28.6139, 77.2090], tips: [
+                    "Implement massive stubble burning prevention programs",
+                    "Accelerate transition to BS-VI emission norms globally",
+                    "Establish low-emission zones in central districts",
+                    "Transition public bus fleet to 100% electric",
+                    "Enforce strict dust control on construction sites"
+                ]
+            },
+            {
+                name: "London", key: "london", flag: "🇬🇧",
+                score: 74, label: "Good", color: "#00e5a0",
+                transport: 28, energy: 33, industry: 22, waste: 17,
+                co2: 4.8, natAvg: 5.2, pm25: 12, no2: 28,
+                grid: 180, renewable: 55,
+                trend: [60, 63, 65, 67, 69, 70, 72, 74],
+                coords: [51.5074, -0.1278], tips: [
+                    "Expand the ULEZ (Ultra Low Emission Zone) further",
+                    "Retrofit historic buildings for energy efficiency",
+                    "Increase segregated cycling infrastructure",
+                    "Mandate smart meters in all properties",
+                    "Adopt decentralized renewable energy grids"
+                ]
+            },
+            {
+                name: "Tokyo", key: "tokyo", flag: "🇯🇵",
+                score: 58, label: "Moderate", color: "#f5c842",
+                transport: 25, energy: 40, industry: 25, waste: 10,
+                co2: 5.5, natAvg: 8.7, pm25: 15, no2: 22,
+                grid: 450, renewable: 22,
+                trend: [52, 53, 55, 56, 57, 57, 58, 58],
+                coords: [35.6762, 139.6503], tips: [
+                    "Shift dependency from imported fossil fuels to renewables",
+                    "Promote teleworking to reduce transit energy",
+                    "Upgrade aging grid infrastructure for green energy",
+                    "Implement aggressive commercial building cooling limits",
+                    "Incentivize local solar adoption in dense areas"
+                ]
+            },
+            {
+                name: "New York", key: "new york", flag: "🇺🇸",
+                score: 62, label: "Moderate", color: "#f5c842",
+                transport: 32, energy: 30, industry: 20, waste: 18,
+                co2: 6.2, natAvg: 14.0, pm25: 18, no2: 35,
+                grid: 290, renewable: 38,
+                trend: [55, 57, 58, 59, 60, 61, 62, 62],
+                coords: [40.7128, -74.0060], tips: [
+                    "Implement congestion pricing vigorously",
+                    "Upgrade the MTA to fully electric efficiency",
+                    "Enforce Local Law 97 for building emissions strict limits",
+                    "Expand offshore wind deployment rapidly",
+                    "Divert organic waste from landfills natively"
+                ]
+            },
+            {
+                name: "Mumbai", key: "mumbai", flag: "🇮🇳",
+                score: 35, label: "Poor", color: "#ff4f6d",
+                transport: 40, energy: 32, industry: 20, waste: 8,
+                co2: 1.9, natAvg: 1.8, pm25: 65, no2: 38,
+                grid: 820, renewable: 14,
+                trend: [42, 41, 40, 39, 38, 37, 36, 35],
+                coords: [19.0760, 72.8777], tips: [
+                    "Improve traffic flow and reduce idling hot-spots",
+                    "Rapidly expand the Metro network to kill road dependency",
+                    "Relocate heavy industries away from dense wind corridors",
+                    "Tackle landfill fires securely through waste management",
+                    "Deploy coastal wind energy farms"
+                ]
+            },
+            {
+                name: "Berlin", key: "berlin", flag: "🇩🇪",
+                score: 68, label: "Good", color: "#00e5a0",
+                transport: 26, energy: 35, industry: 24, waste: 15,
+                co2: 5.8, natAvg: 9.0, pm25: 10, no2: 20,
+                grid: 350, renewable: 42,
+                trend: [55, 57, 59, 61, 63, 65, 67, 68],
+                coords: [52.5200, 13.4050], tips: [
+                    "Accelerate the ban on combustion engine vehicles",
+                    "Maximize rooftop solar on unused public buildings",
+                    "Enhance district heating with geo-thermal",
+                    "Promote the 15-minute city urban model",
+                    "Phase out final coal dependency strictly"
+                ]
+            }
+        ];
+
+        let activeCity = CITIES[1]; // Default London
+
+        // Chart inst references
+        let trendChartInst = null;
+        let donutChartInst = null;
+        let compareChartInst = null;
+        
+        // Map inst
+        let mapInst = null;
+        let mapMarker = null;
+
+        // Colors
+        const chartColors = {
+            blue: "#4f8fff", green: "#00e5a0", yellow: "#f5c842", red: "#ff4f6d", 
+            border: "#1a2540", card: "#0d1526", text: "#e8f0ff"
+        };
+        Chart.defaults.color = chartColors.text;
+        Chart.defaults.font.family = "'JetBrains Mono', monospace";
+
+        // --- 2. INIT ---
+        function init() {
+            renderCitySelector();
+            setupTabs();
+            renderCompareChart(); // Only needs building once initially
+            initMap();
+            loadCity(activeCity);
+        }
+
+        function renderCitySelector() {
+            const container = document.getElementById('city-selector');
+            container.innerHTML = '';
+            CITIES.forEach(city => {
+                const btn = document.createElement('div');
+                btn.className = `city-pill ${city.key === activeCity.key ? 'active' : ''}`;
+                btn.innerHTML = `${city.flag} ${city.name}`;
+                btn.onclick = () => {
+                    document.querySelectorAll('.city-pill').forEach(el => el.classList.remove('active'));
+                    btn.classList.add('active');
+                    activeCity = city;
+                    loadCity(activeCity);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        // --- 3. LOGIC ---
+        function getAQI(pm25) {
+            if(pm25 <= 12) return { l: "Good", c: chartColors.green };
+            if(pm25 <= 35) return { l: "Moderate", c: chartColors.yellow };
+            if(pm25 <= 55) return { l: "Unhealthy for Sensitive", c: "#f97316" };
+            return { l: "Unhealthy", c: chartColors.red };
+        }
+
+        async function fetchAPIs(city) {
+            // Weather
+            try {
+                const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.coords[0]}&longitude=${city.coords[1]}&current=temperature_2m,wind_speed_10m`);
+                if(wRes.ok) {
+                    const data = await wRes.json();
+                    document.getElementById('weather-val').innerText = `${data.current.temperature_2m}°C, Wind: ${data.current.wind_speed_10m}km/h`;
+                }
+            } catch(e) { document.getElementById('weather-val').innerText = "Weather unavailable"; }
+
+            // OpenAQ
+            try {
+                const locRes = await fetch(`https://api.openaq.org/v2/locations?city=${city.name}&limit=1&has_geo=true`);
+                if(locRes.ok) {
+                    const locData = await locRes.json();
+                    if(locData.results.length > 0) {
+                        const mRes = await fetch(`https://api.openaq.org/v2/measurements?location_id=${locData.results[0].id}&parameter=pm25&limit=1`);
+                        if(mRes.ok) {
+                            const mData = await mRes.json();
+                            if(mData.results.length > 0) {
+                                return mData.results[0].value;
+                            }
+                        }
+                    }
+                }
+            } catch(e) {}
+            return city.pm25; // fallback
+        }
+
+        async function loadCity(city) {
+            // Update CSS Var for glow
+            document.documentElement.style.setProperty('--ring-color', city.color);
+            
+            // Hero Score Ring
+            const ring = document.getElementById('score-ring');
+            ring.style.strokeDashoffset = '427.26'; // Reset visually
+            setTimeout(() => {
+                ring.style.strokeDashoffset = 427.26 - (427.26 * (city.score / 100));
+            }, 50);
+            
+            document.getElementById('score-val').innerText = city.score;
+            document.getElementById('score-status').innerText = city.label;
+            document.getElementById('score-status').style.color = city.color;
+            document.getElementById('score-val').style.color = city.color;
+
+            // Stats
+            document.getElementById('co2-val').innerText = city.co2 + "t";
+            document.getElementById('nat-val').innerText = city.natAvg + "t";
+            
+            // Calc Top Emitter
+            const sData = { "Transport": city.transport, "Energy": city.energy, "Industry": city.industry, "Waste": city.waste };
+            const topEmit = Object.keys(sData).reduce((a, b) => sData[a] > sData[b] ? a : b);
+            document.getElementById('top-emitter').innerText = topEmit;
+
+            // Grid
+            document.getElementById('grid-val').innerText = city.grid + " gCO₂/kWh";
+            document.getElementById('grid-bar-ren').style.width = city.renewable + "%";
+            document.getElementById('grid-bar-fos').style.width = (100 - city.renewable) + "%";
+            document.getElementById('ren-txt').innerText = `Renewable (${city.renewable}%)`;
+
+            // World Avg
+            const diff = city.co2 - 4.7;
+            const diffText = diff > 0 ? `+${diff.toFixed(1)}t above global avg` : `${diff.toFixed(1)}t below global avg`;
+            document.getElementById('world-diff').innerText = city.co2 + "t";
+            document.getElementById('world-diff').parentElement.querySelector('.stat-sub span').innerText = diffText;
+            document.getElementById('world-bar-city').style.width = (city.co2 / 10) * 100 + "%";
+            document.getElementById('world-bar-city').style.background = diff > 0 ? chartColors.red : chartColors.blue;
+
+            // PM.25 & AQI (Reset while fetch)
+            document.getElementById('pm-val').innerText = "Loading...";
+            const pm25 = await fetchAPIs(city);
+            document.getElementById('pm-val').innerText = Math.round(pm25) + " μg/m³";
+            
+            const aqi = getAQI(pm25);
+            document.getElementById('aqi-dot').style.background = aqi.c;
+            document.getElementById('aqi-text').innerText = "AQI " + aqi.l;
+            document.getElementById('aqi-text').style.color = aqi.c;
+            document.getElementById('aqi-text').parentElement.style.borderColor = aqi.c + "55";
+            document.getElementById('aqi-text').parentElement.style.background = aqi.c + "11";
+
+            // Update Tabs
+            renderCharts(city);
+            renderSectors(city);
+            renderTips(city);
+            updateMap(city);
+        }
+
+        function renderCharts(city) {
+            // Trend
+            if(trendChartInst) trendChartInst.destroy();
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            trendChartInst = new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'],
+                    datasets: [{
+                        label: 'Score',
+                        data: city.trend,
+                        borderColor: city.color,
+                        backgroundColor: city.color + '22',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointBackgroundColor: city.color,
+                        pointBorderColor: '#050a14',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { backgroundColor: chartColors.card, borderColor: chartColors.border, borderWidth: 1 }
+                    },
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: chartColors.border } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Donut
+            if(donutChartInst) donutChartInst.destroy();
+            const ctxDonut = document.getElementById('donutChart').getContext('2d');
+            donutChartInst = new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Transport', 'Energy', 'Industry', 'Waste'],
+                    datasets: [{
+                        data: [city.transport, city.energy, city.industry, city.waste],
+                        backgroundColor: [chartColors.blue, chartColors.green, chartColors.yellow, chartColors.red],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: chartColors.text } },
+                        tooltip: { backgroundColor: chartColors.card, borderColor: chartColors.border, borderWidth: 1 }
+                    }
+                }
+            });
+        }
+
+        function renderCompareChart() {
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            const sorted = [...CITIES].sort((a,b) => b.score - a.score);
+            compareChartInst = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(c => c.name),
+                    datasets: [{
+                        label: 'Score',
+                        data: sorted.map(c => c.score),
+                        backgroundColor: sorted.map(c => c.color),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: chartColors.card, borderColor: chartColors.border, borderWidth: 1 }
+                    },
+                    scales: {
+                        x: { min: 0, max: 100, grid: { color: chartColors.border } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderSectors(city) {
+            const cont = document.getElementById('sectors-container');
+            const map = [
+                {n: "Transport", v: city.transport, i: "🚗", c: chartColors.blue},
+                {n: "Energy", v: city.energy, i: "⚡", c: chartColors.green},
+                {n: "Industry", v: city.industry, i: "🏭", c: chartColors.yellow},
+                {n: "Waste", v: city.waste, i: "♻️", c: chartColors.red}
+            ];
+            
+            cont.innerHTML = map.map((s, idx) => `
+                <div class="card delay-${idx+1}">
+                    <div class="sector-header">
+                        <div class="sector-name">${s.i} ${s.n}</div>
+                        <div class="sector-val" style="color:${s.c}">${s.v}%</div>
+                    </div>
+                    <div class="sector-bar-bg">
+                        <div class="sector-bar-fg" style="width:${s.v}%; background:${s.c}"></div>
+                    </div>
+                    <div class="sector-status">
+                        ${s.v > 30 ? '⚠️ High contributor — action needed' : s.v > 20 ? '🟡 Moderate — room for improvement' : '✅ Under control'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTips(city) {
+            const cont = document.getElementById('tips-container');
+            cont.innerHTML = city.tips.map((t, idx) => `
+                <div class="card tip-card delay-${idx+1}">
+                    <div class="tip-num">0${idx+1}</div>
+                    <div style="font-size: 1rem; line-height: 1.5;">${t}</div>
+                </div>
+            `).join('');
+        }
+
+        function initMap() {
+            mapInst = L.map('map', { zoomControl: false }).setView(activeCity.coords, 11);
+            L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20, attribution: '&copy; Stadia Maps'
+            }).addTo(mapInst);
+        }
+
+        function updateMap(city) {
+            if(!mapInst) return;
+            mapInst.flyTo(city.coords, 11, { duration: 1.5 });
+            
+            if(mapMarker) mapInst.removeLayer(mapMarker);
+
+            // Custom pulsing marker
+            const icon = L.divIcon({
+                className: '',
+                html: `<div style="width:20px; height:20px; background:${city.color}; border:2px solid #fff; border-radius:50%; box-shadow: 0 0 15px ${city.color};"></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            mapMarker = L.marker(city.coords, { icon }).addTo(mapInst)
+                .bindPopup(`<br><div class="custom-popup" style="font-weight:bold">${city.name}</div><div class="custom-popup">Score: ${city.score}</div>`, {
+                    className: 'custom-popup'
+                });
+        }
+
+        function setupTabs() {
+            const btns = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+
+            btns.forEach(btn => {
+                btn.onclick = () => {
+                    btns.forEach(b => b.classList.remove('active'));
+                    contents.forEach(c => c.classList.remove('active'));
+                    
+                    btn.classList.add('active');
+                    document.getElementById(btn.dataset.tab).classList.add('active');
+
+                    // If map tab, fix leafet rendering bug
+                    if(btn.dataset.tab === 'tab-map') {
+                        setTimeout(() => mapInst.invalidateSize(), 150);
+                    }
+                };
+            });
+        }
+
+        // Run
+        window.onload = init;
+    </script>
+</body>
+</html>
